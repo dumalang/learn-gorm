@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	"io/ioutil"
 	"log"
@@ -19,6 +20,7 @@ var err error
 
 type Product struct {
 	ID     uint64          `json:"id" gorm:"primaryKey;type:bigint(20) AUTO_INCREMENT;"`
+	Uuid   uuid.UUID       `json:"uuid" type:uuid;`
 	Code   string          `json:"code"`
 	Name   string          `json:"name"`
 	Price  decimal.Decimal `json:"price" sql:"type:decimal(15,2)"`
@@ -75,6 +77,7 @@ func createProduct(w http.ResponseWriter, r *http.Request) {
 
 	json.Unmarshal(payload, &product)
 
+	product.Uuid = uuid.Must(uuid.NewV4())
 	product.Price2 = product.Price
 
 	db.Debug().Create(&product)
