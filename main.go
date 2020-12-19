@@ -10,9 +10,11 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 var db *gorm.DB
@@ -34,9 +36,62 @@ type Result struct {
 	Message string      `json:"message"`
 }
 
+type DBConnection struct {
+	DbName     string
+	DbHost     string
+	DbUsername string
+	DbPassword string
+	DbPort     string
+}
+
+func InitializeViper() {
+	viper.AddConfigPath("../")
+	viper.SetConfigFile(".env")
+	viper.AutomaticEnv()
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		if os.IsExist(err) {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				// Config file not found; ignore error if desired
+			} else {
+				log.Panic(err)
+			}
+		}
+	}
+}
+
+func GetDBConnection() string {
+
+	dbConnection := DBConnection{
+		DbName:     viper.GetString("DB_NAME"),
+		DbHost:     viper.GetString("DB_HOST"),
+		DbUsername: viper.GetString("DB_USERNAME"),
+		DbPassword: viper.GetString("DB_PASSWORD"),
+		DbPort:     viper.GetString("DB_PORT"),
+	}
+
+	dbPassword := ""
+
+	if dbConnection.DbPassword != "" {
+		dbPassword = ":" + dbConnection.DbPassword
+	}
+
+	stringConnection := fmt.Sprintf(
+		"%s%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		dbConnection.DbUsername, dbPassword, dbConnection.DbHost, dbConnection.DbPort, dbConnection.DbName)
+
+	fmt.Println(stringConnection)
+
+	return stringConnection
+
+}
+
 func main() {
+	InitializeViper()
 	fmt.Println("Hello world")
-	db, err = gorm.Open("mysql", "root@tcp(127.0.0.1:3306)/gorm?charset=utf8&parseTime=True")
+
+	db, err = gorm.Open("mysql", GetDBConnection())
 
 	if err != nil {
 		fmt.Println(err)
